@@ -1,0 +1,135 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-app
+  namespace: default
+data:
+  server.sh: |
+    #!/bin/sh
+    while true; do
+      { 
+        echo -ne "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n"
+        echo '{"message":"Hello from Backend!","timestamp":"'$(date)'","hostname":"'$(hostname)'"}'
+      } | nc -l -p 5000 -q 1
+    done
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-app
+  namespace: default
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <title>Frontend - allower.ru</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                text-align: center;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .container {
+                background: rgba(255,255,255,0.1);
+                backdrop-filter: blur(10px);
+                padding: 40px;
+                border-radius: 15px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+                max-width: 600px;
+                border: 1px solid rgba(255,255,255,0.2);
+            }
+            h1 { margin-bottom: 10px; font-size: 2.5em; }
+            p { margin-bottom: 20px; opacity: 0.9; }
+            button {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: 2px solid white;
+                padding: 12px 30px;
+                border-radius: 25px;
+                cursor: pointer;
+                font-size: 1em;
+                font-weight: bold;
+                transition: all 0.3s ease;
+                margin: 10px;
+            }
+            button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            }
+            #response {
+                margin-top: 30px;
+                padding: 20px;
+                background: rgba(255,255,255,0.15);
+                border-radius: 10px;
+                min-height: 60px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.1em;
+                white-space: pre-wrap;
+            }
+            .metrics { margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 5px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🚀 Frontend + Monitoring</h1>
+            <p>allower.ru с Prometheus + Grafana</p>
+            
+            <button onclick="fetchBackend()">📡 Call Backend API</button>
+            
+            <div id="response">Результат появится здесь...</div>
+            
+            <div class="metrics">
+                <p>📊 Grafana: <strong>https://grafana.allower.ru\</strong\>\</p\>
+            </div>
+        </div>
+
+        <script>
+            function fetchBackend() {
+                document.getElementById('response').innerText = '⏳ Загрузка...';
+                fetch('/api/hello')
+                    .then(r => r.json())
+                    .then(data => {
+                        document.getElementById('response').innerText = 
+                            '✅ Успешно!\n\n' +
+                            'Message: ' + data.message + '\n' +
+                            'Host: ' + data.hostname + '\n' +
+                            'Time: ' + data.timestamp;
+                    })
+                    .catch(err => {
+                        document.getElementById('response').innerText = '❌ Ошибка: ' + err;
+                    });
+            }
+        </script>
+    </body>
+    </html>
+
+  default.conf: |
+    server {
+        listen 80;
+        server_name _;
+        
+        root /usr/share/nginx/html;
+        index index.html;
+        
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+        
+        location /api/ {
+            proxy_pass http://backend:5000/\;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }

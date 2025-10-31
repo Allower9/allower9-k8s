@@ -1,0 +1,32 @@
+replicas: 1
+
+adminUser: admin
+adminPassword: "GrafanaSecurePass123!"
+
+persistence:
+  enabled: true
+  storageClassName: yc-storage-ssd
+  size: 5Gi
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus-operated:9090
+      access: proxy
+      isDefault: true
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi

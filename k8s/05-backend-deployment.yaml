@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: default
+  labels:
+    app: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        version: v1
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - backend
+            topologyKey: kubernetes.io/hostname
+      
+      containers:
+      - name: backend
+        image: busybox:latest
+        command: ["sh"]
+        args: ["/app/server.sh"]
+        ports:
+        - containerPort: 5000
+          name: http
+        
+        resources:
+          limits:
+            cpu: 100m
+            memory: 64Mi
+          requests:
+            cpu: 50m
+            memory: 32Mi
+        
+        volumeMounts:
+        - name: app-config
+          mountPath: /app
+        - name: data
+          mountPath: /data
+      
+      volumes:
+      - name: app-config
+        configMap:
+          name: backend-app
+          defaultMode: 0755
+      - name: data
+        persistentVolumeClaim:
+          claimName: backend-data
